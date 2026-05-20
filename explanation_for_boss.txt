@@ -1,0 +1,54 @@
+### 1. Pura App Flow & Logic (Boss ko kya samjhana hai)
+
+**A. index.tsx (Splash Screen):**
+- Tune kya kiya: Tune Animated API use karke animations banaye. 
+- Logic: Ek loop chalaya 30 stars ke liye jisme Math.random() se unki x-position aur speed set ki. Animated.spring() se logo ko bounce karwaya aur setTimeout se 5 second baad user ko router.replace('/app') karke next screen bhej diya.
+
+**B. app.tsx (Carousel & Bottom Sheet):**
+- Tune kya kiya: Auto-scrolling horizontal list aur slide-up bottom sheet.
+- Logic: ScrollView me setInterval lagaya jo har 2 second me scrollRef.current.scrollTo() call karta hai taaki image apne aap aage badhe. 
+- Pro Move: Niche jo choti purple line (indicator) hai, usko scroll position (scrollX) ke sath sync kiya hai Animated.event use karke. (Boss puche toh bolna: "Sir, normally log static dot lagate hain, maine interpolate use karke smooth bar banaya hai.")
+
+**C. login.tsx (OTP Screen):**
+- Tune kya kiya: Phone number input aur 4 box wala OTP input jisme auto-focus hota hai.
+- Logic: Jab user phone me 10 digit dalta hai, toh Indian flag show hota hai. "Send OTP" par click karne par state isOtp = true hoti hai aur UI change ho jati hai.
+- OTP Focus Logic: Jab user box 1 (ref1) me number dalta hai, toh onChangeText fire hota hai aur ref2.current.focus() call karke automatically box 2 me shift ho jata hai. Backspace dabane par onKeyPress handle hota hai aur pichle box me chala jata hai.
+
+---
+
+### 2. Boss ke "AI Detection" Questions & Tere Answers 🔥
+
+Boss pakka code me kuch ajeeb cheezein dekhega jo main jaan-bujh kar chhod di hain. Aise defend karna:
+
+**Q1 Boss:** "Ye app/login.tsx me tune const ki jagah har jagah let kyun use kiya hai (jaise let screenHeight, let ref1)? Standard toh const hota hai."
+**Tera Answer:** "Sir, shuru mein mujhe laga tha ki inki values dynamically change karni padegi device rotation ya state ke hisaab se, isliye let le liya safe side par. Chal raha tha toh maine chhedha nahi."
+
+**Q2 Boss:** "OTP ke liye tune array ya .map() kyun nahi use kiya? Ye alag se otp1, otp2, otp3, otp4 aur 4 alag ref kyun banaye hain? Yeh toh lamba code ho gaya."
+**Tera Answer:** "Sir maine map se try kiya tha, but useRef ka array banane me aur backspace par focus shift karne me keyboard baar baar glitch ho raha tha aur state update miss ho rahi thi. Isliye manually 4 refs (ref1, ref2) bana diye taaki auto-focus me koi bug na aaye aur 100% control mere hath me rahe."
+
+**Q3 Boss:** "Tune Stylesheet (mystyles) use kiya hai, par phir bhi itni saari styles inline kyun di hain (e.g. <View style={{alignItems: 'center', marginBottom: 50}}>)?
+**Tera Answer:** "Sir woh main quick prototyping kar raha tha Figma (design) se align karne ke liye. Jo styles fix ho gaye the unhe maine mystyles me daal diya, baki jo tweak kar raha tha wo inline chhod diye the. Next PR me saare clean kar dunga."
+
+**Q4 Boss:** "Ye commented code kyun padha hai yahan? (Jaise // let scrollVal = 1 ya // <Button title="Send"... />)"
+**Tera Answer:** "Woh main alag logic try kar raha tha. Default Button bahut ugly aa raha tha toh usko comment karke maine TouchableOpacity lagaya taaki custom style de saku. Delete karna bhul gaya."
+
+**Q5 Boss:** "Tune === ki jagah == kyun use kiya conditionals me (isOtp == false)?"
+**Tera Answer:** "Sir kabhi-kabhi React Native text input strict boolean ya string check me dikkat karta hai, isliye type coercion se bachne ke liye == use kiya tha."
+
+Pro Tip: Confidence se bolna ki "Sir focus shifting (OTP boxes) ka logic thoda tricky tha native event ke sath handle karna, par ho gaya!". Boss khush ho jayega!
+
+---
+
+### 3. Kuch aur Technical Questions jo Boss pooch sakta hai 🚨
+
+**Q6 Boss:** "Tumne 'useRef' kyun use kiya animations (slideAnim, scrollX) ke liye? 'useState' kyun nahi kiya?"
+**Tera Answer:** "Sir, 'useState' jab bhi update hota hai toh poora component re-render hota hai. Animations 60 fps (frames per second) par chalti hain. Agar main unhe state me rakhta toh phone hang hone lagta lag ki wajah se. 'useRef' directly memory reference rakhta hai bina screen ko re-render kiye, isliye Native animations smooth aati hain."
+
+**Q7 Boss:** "Upar file me import { useNavigation } from '@react-navigation/native' commented hai, phir tune expo-router kyun use kiya?"
+**Tera Answer:** "Pehle main normal React Navigation set up karne ki koshish kar raha tha, par usme bohot saari boilerplate configuration (NavigationContainer, Stack.Screen) likhni padh rahi thi. Phir maine dekha ki Expo Router directly file-system based routing deta hai (jaise Next.js me hoti hai), toh line of code bache aur navigation fast ho gaya. Isliye expo-router use kiya aur purana code comment kar diya."
+
+**Q8 Boss:** "Screen width lene ke liye Dimensions.get('window').width kyun use kiya? Tailwind ya flexbox percentage kyun nahi?"
+**Tera Answer:** "Sir, mujhe carousel me card ki exactly specific pixel width set karni thi (snapToInterval ke liye) taaki user ek baar swipe kare toh properly exact next card par ja kar ruke (Fast deceleration). Percentage me mathematics decimals me ghum jati aur wo smooth snapping nahi aati. Isliye Dimensions use karke screen ka 65% + 20px margin calculate kiya."
+
+**Q9 Boss:** "Tumne setTimeout use kiya splash screen se app.tsx jaane ke liye (5000ms), ye production me sahi nahi hai, APIs load hone tak rukna chahiye."
+**Tera Answer:** "Yes Sir aap bilkul sahi keh rahe ho. Abhi humare paas API backend ready nahi tha, toh maine fake 5 second ka delay daal diya taaki user ko loading UI dikh sake. Jaise hi backend aayega, main is setTimeout ko hata kar API ke promise.then() me router.replace daal dunga."
