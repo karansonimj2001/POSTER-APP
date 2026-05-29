@@ -1,11 +1,19 @@
+/**
+ * Marketing landing page with auto-scrolling preview cards.
+ * Tapping "Get Started" navigates to Login.
+ */
+import { Dimensions, StyleSheet, View, Text, TouchableOpacity, Image, Animated, ScrollView } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import React, { useEffect, useRef } from 'react'
-import { SafeAreaView, View, Text, StyleSheet, Animated, Dimensions, TouchableOpacity, ScrollView, Image } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { SvgIcon } from '../components/SvgIcon';
 
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+import { useAppNavigation } from '../navigation/types'
+import { useTranslation } from 'react-i18next'
 
-let cards = [
+const screenWidth = Dimensions.get('window').width
+const screenHeight = Dimensions.get('window').height
+
+const cards = [
   { id: 1, bgColor: '#1A1A2E', rotate: '-5deg' },
   { id: 2, bgColor: '#13132B', rotate: '0deg' },
   { id: 3, bgColor: '#1A1A35', rotate: '5deg' },
@@ -13,23 +21,24 @@ let cards = [
 ]
 
 export default function Landing() {
-  let navigation = useNavigation<any>()
-  let slideUpAnim = useRef(new Animated.Value(screenHeight)).current
-  let scrollRef = useRef<any>(null)
-  let scrollX = useRef(new Animated.Value(0)).current
-  
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
+  const slideUpAnim = useRef(new Animated.Value(screenHeight)).current
+  const scrollRef = useRef<ScrollView>(null)
+  const scrollX = useRef(new Animated.Value(0)).current
+
   useEffect(() => {
     let scrollVal = 0
-    let myTimer = setInterval(() => {
-      scrollVal = scrollVal + screenWidth * 0.65 + 20 
+    const myTimer = setInterval(() => {
+      scrollVal = scrollVal + screenWidth * 0.65 + 20
       if (scrollVal > (cards.length - 1) * (screenWidth * 0.65 + 20)) {
-        scrollVal = 0 
+        scrollVal = 0
       }
-      if(scrollRef.current != null) {
+      if (scrollRef.current !== null) {
         scrollRef.current.scrollTo({ x: scrollVal, animated: true })
       }
     }, 2000)
-    
+
     return () => {
       clearInterval(myTimer)
     }
@@ -49,7 +58,7 @@ export default function Landing() {
   }
 
   return (
-    <SafeAreaView style={appStyles.mainBg}>
+    <SafeAreaView style={appStyles.mainBg} edges={['top', 'bottom']}>
       
       {/* top part */}
       <View style={{ flex: 1, justifyContent: 'center', paddingTop: 50, paddingBottom: screenHeight * 0.35 }}>
@@ -96,25 +105,25 @@ export default function Landing() {
         </View>
         
         <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#1E1E2E', marginBottom: 12 }}>
-          Make Every Day{'\n'}Feel Special
+          {t('landing.heading')}
         </Text>
         
         <Text style={{ fontSize: 14, color: '#64748B', marginBottom: 20 }}>
-          Get personalized wishes, quotes & posts — in your language, with your face.
+          {t('landing.subtitle')}
         </Text>
         
         <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 30 }}>
-          <Text style={{ color: '#F59E0B' }}>50 lakh+ log roz share karte hain </Text>
-          🇮🇳
+          <Text style={{ color: '#F59E0B' }}>{t('landing.socialProof')}</Text>
+          <SvgIcon name="indiaFlag" size={24} color="#FFFFFF" />
         </Text>
         
         <TouchableOpacity style={appStyles.btnStyle} onPress={gotoLogin}>
-          <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Get Started</Text>
-          <Text style={{ color: 'white', fontSize: 22, fontWeight: 'bold' }}>→</Text>
+          <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>{t('landing.getStarted')}</Text>
+          <SvgIcon name="arrowRight" size={22} color="#FFFFFF" />
         </TouchableOpacity>
       </Animated.View>
 
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -150,3 +159,4 @@ const appStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 })
+

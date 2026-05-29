@@ -1,20 +1,32 @@
-import React, { useRef, useEffect } from 'react'
+/**
+ * Onboarding final step — shows summary, saves all data to UserContext + AsyncStorage,
+ * then navigates to MainApp. This is where OnboardingContext data gets persisted.
+ */
+import React, { useRef, useEffect, useContext } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Image, StatusBar } from 'react-native'
-import { useNavigation, useRoute } from '@react-navigation/native'
-
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { CommonActions } from '@react-navigation/native'
+import { useAppNavigation } from '../navigation/types'
+import { SvgIcon } from '../components/SvgIcon';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OnboardingContext } from '../onboarding/OnboardingContext';
+import { useUser } from '../context/UserContext';
+import { useTranslation } from 'react-i18next'
 
 export default function OnboardingComplete() {
-  const navigation = useNavigation<any>()
-  const route = useRoute<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
+  // Read the temporary onboarding data collected across all steps
+  const onboarding = useContext(OnboardingContext)
+  const data = onboarding?.data || {}
+  const { user, setUser } = useUser()   // setUser persists to AsyncStorage
 
-  const params = route.params || {}
-  const name = params.name || 'User1'
-  const language = params.language || 'Hindi'
-  const state = params.state || 'Bihar'
-  const purpose = params.purpose || 'For Myself'
+  // Compute values from onboarding data, with fallbacks
+  const purpose = data.purpose || 'For Myself'
   const isBusiness = purpose === 'For Business'
+  const name = isBusiness ? (data.businessInfo?.name || 'My Business') : (data.profileInfo?.name || 'User1')
+  const language = data.language || 'Hindi'
+  const state = data.location || 'Bihar'
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
@@ -34,8 +46,28 @@ export default function OnboardingComplete() {
     ]).start()
   }, [])
 
-  const handleContinue = () => {
-    navigation.navigate('MainApp')
+  // Persist all onboarding data to UserContext (→ AsyncStorage) and navigate to MainApp
+  const handleContinue = async () => {
+    try {
+      await setUser({
+        name: isBusiness ? (data.businessInfo?.name || '') : (data.profileInfo?.name || ''),
+        purpose: isBusiness ? 'business' : 'myself',
+        businessName: isBusiness ? (data.businessInfo?.name || '') : undefined,
+        language: data.language || 'Hindi',
+        location: data.location || '',
+        interests: data.interests || [],
+      })
+      await AsyncStorage.setItem('onboardingDone', 'true')  // Flag: skip onboarding on next launch
+    } catch (e) {
+      // ignore errors — navigation still happens
+    }
+    // Reset stack to MainApp (can't go back to onboarding)
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'MainApp' }],
+      })
+    )
   }
 
   const handleBack = () => {
@@ -43,15 +75,15 @@ export default function OnboardingComplete() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0E1C" />
 
       {/* Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} activeOpacity={0.7} onPress={handleBack}>
-          <Text style={styles.backBtnText}>←</Text>
+          <SvgIcon name="arrowLeft" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Onboarding Complete</Text>
+        <Text style={styles.headerTitle}>{t('onboardingComplete.headerTitle')}</Text>
         <View style={styles.backBtnPlaceholder} />
       </View>
       <View style={styles.headerLine} />
@@ -86,38 +118,37 @@ export default function OnboardingComplete() {
             {/* Verified Gold Badge (Only for Business Flow) */}
             {isBusiness && (
               <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedText}>✓</Text>
+                <SvgIcon name="check" size={16} color="#000000" />
               </View>
             )}
           </View>
         </View>
 
-        {/* Welcome Text */}
-        <Text style={styles.welcomeText}>You're all set, {name}!</Text>
+
 
         {/* Choices Summary Card */}
         <View style={styles.summaryCard}>
           {/* Name/Business Name Row */}
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>{isBusiness ? 'Business Name:' : 'Name:'}</Text>
+            <Text style={styles.rowLabel}>{isBusiness ? t('onboardingComplete.businessName') : t('onboardingComplete.name')}</Text>
             <Text style={styles.rowValue}>{name}</Text>
           </View>
           
           {/* Language Row */}
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Language:</Text>
+            <Text style={styles.rowLabel}>{t('onboardingComplete.language')}</Text>
             <Text style={styles.rowValue}>{language}</Text>
           </View>
 
           {/* State Row */}
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>State:</Text>
+            <Text style={styles.rowLabel}>{t('onboardingComplete.state')}</Text>
             <Text style={styles.rowValue}>{state}</Text>
           </View>
 
           {/* Purpose Row */}
           <View style={styles.row}>
-            <Text style={styles.rowLabel}>Purpose:</Text>
+            <Text style={styles.rowLabel}>{t('onboardingComplete.purpose')}</Text>
             <Text style={styles.rowValue}>{purpose}</Text>
           </View>
         </View>
@@ -127,11 +158,11 @@ export default function OnboardingComplete() {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+            <Text style={styles.btnText}>{t('onboardingComplete.continue')}  </Text><SvgIcon name="arrowRight" size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
-    </View>
+    </SafeAreaView>
   )
 }
 

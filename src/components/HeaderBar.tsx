@@ -1,6 +1,10 @@
+/**
+ * Reusable header with back button and centered title.
+ * Not currently used by any screen; all screens have custom headers.
+ */
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useAppNavigation } from '../navigation/types';
 
 type HeaderBarProps = {
   title: string;
@@ -9,7 +13,7 @@ type HeaderBarProps = {
 };
 
 const HeaderBar: React.FC<HeaderBarProps> = ({ title, onBack, showBack = true }) => {
-  const navigation = useNavigation<any>();
+  const navigation = useAppNavigation();
   const handleBack = () => {
     if (onBack) {
       onBack();

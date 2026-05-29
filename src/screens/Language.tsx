@@ -1,13 +1,21 @@
+/**
+ * Onboarding step 1 — pick Hindi or English. Saves to OnboardingContext + i18n.
+ */
 import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, StatusBar } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAppNavigation } from '../navigation/types'
+import { CheckIcon, MapPinIcon, ArrowRight } from '../components/Icons'
+import { useTranslation } from 'react-i18next'
+import { changeLanguage } from '../i18n'
 
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+import { OnboardingContext } from '../onboarding/OnboardingContext'
 
 export default function Language() {
-  const navigation = useNavigation<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
   const [selectedLang, setSelectedLang] = useState<'hindi' | 'english'>('hindi')
+  const onboarding = React.useContext(OnboardingContext)
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
@@ -27,19 +35,25 @@ export default function Language() {
     ]).start()
   }, [])
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    const lang = selectedLang === 'hindi' ? 'Hindi' : 'English';
+    const i18nLang = selectedLang === 'hindi' ? 'hi' : 'en';
+    await changeLanguage(i18nLang)
+    if (onboarding) {
+      onboarding.setData(prev => ({ ...prev, language: lang }));
+    }
     navigation.navigate('Usage', {
-      language: selectedLang === 'hindi' ? 'Hindi' : 'English'
+      language: lang
     })
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0E1C" />
 
       {/* Header Bar */}
       <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>Onboarding</Text>
+        <Text style={styles.headerTitle}>{t('language.headerTitle')}</Text>
       </View>
       <View style={styles.headerLine} />
 
@@ -55,8 +69,8 @@ export default function Language() {
         </View>
 
         {/* Heading */}
-        <Text style={styles.mainHeading}>Choose Your Language</Text>
-        <Text style={styles.subHeading}>Pick the language for your daily{"\n"}content</Text>
+        <Text style={styles.mainHeading}>{t('language.title')}</Text>
+        <Text style={styles.subHeading}>{t('language.subtitle')}</Text>
 
         {/* Language Cards Row */}
         <View style={styles.cardsRow}>
@@ -73,17 +87,17 @@ export default function Language() {
             {/* Selected Checkmark in top-right */}
             {selectedLang === 'hindi' && (
               <View style={styles.checkWrapper}>
-                <Text style={styles.checkText}>✓</Text>
+                <CheckIcon size={12} color="#000000" />
               </View>
             )}
             
             {/* Popular Badge in top-left */}
             <View style={styles.popularBadge}>
-              <Text style={styles.popularText}>POPULAR</Text>
+              <Text style={styles.popularText}>{t('language.popular')}</Text>
             </View>
 
             <Text style={[styles.langTextNative, selectedLang === 'hindi' ? styles.selectedText : styles.unselectedText]}>हिंदी</Text>
-            <Text style={styles.langTextSub}>Hindi</Text>
+            <Text style={styles.langTextSub}>{t('language.hindiSub')}</Text>
           </TouchableOpacity>
 
           {/* English Card */}
@@ -98,20 +112,20 @@ export default function Language() {
             {/* Selected Checkmark in top-right */}
             {selectedLang === 'english' && (
               <View style={styles.checkWrapper}>
-                <Text style={styles.checkText}>✓</Text>
+                <CheckIcon size={12} color="#000000" />
               </View>
             )}
 
             <Text style={[styles.langTextNative, selectedLang === 'english' ? styles.selectedText : styles.unselectedText]}>English</Text>
-            <Text style={styles.langTextSub}>English</Text>
+            <Text style={styles.langTextSub}>{t('language.englishSub')}</Text>
           </TouchableOpacity>
 
         </View>
 
         {/* Location Recommendation Badge */}
         <View style={styles.recommendationBadge}>
-          <Text style={styles.pinIcon}>📍</Text>
-          <Text style={styles.recommendationText}>Most people in your area use Hindi</Text>
+          <MapPinIcon size={14} color="#A78BFA" />
+          <Text style={[styles.recommendationText, {marginLeft: 8}]}>{t('language.areaHint')}</Text>
         </View>
 
       </Animated.View>
@@ -119,11 +133,12 @@ export default function Language() {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+          <Text style={styles.btnText}>{t('language.continue')}</Text>
+          <ArrowRight size={18} color="#FFFFFF" style={{marginLeft: 8}} />
         </TouchableOpacity>
       </View>
 
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -228,11 +243,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkText: {
-    color: '#000000',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   popularBadge: {
     position: 'absolute',
     top: -12,
@@ -273,10 +283,6 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
   },
-  pinIcon: {
-    marginRight: 8,
-    fontSize: 14,
-  },
   recommendationText: {
     color: '#A78BFA',
     fontSize: 13,
@@ -291,6 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#7C3AED',
     borderRadius: 16,
     height: 56,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },

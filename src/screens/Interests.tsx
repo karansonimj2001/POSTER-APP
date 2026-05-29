@@ -1,9 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react'
+/**
+ * Onboarding step 4 — select interest categories (religious/cultural).
+ * Saves selection to OnboardingContext, navigates to StateSelection.
+ */
+import React, { useState, useRef, useEffect, useContext } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Dimensions, StatusBar } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useAppNavigation } from '../navigation/types'
+import { useTranslation } from 'react-i18next'
+import { OnboardingContext } from '../onboarding/OnboardingContext'
 
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+const screenWidth = Dimensions.get('window').width
+const screenHeight = Dimensions.get('window').height
 
 interface Category {
   id: string;
@@ -23,7 +29,9 @@ const CATEGORIES: Category[] = [
 ]
 
 export default function Interests({ route }: any) {
-  const navigation = useNavigation<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
+  const onboarding = useContext(OnboardingContext)
   const [selectedIds, setSelectedIds] = useState<string[]>(['hindu']) // default select Hindu like screenshot
 
   const fadeAnim = useRef(new Animated.Value(0)).current
@@ -53,6 +61,7 @@ export default function Interests({ route }: any) {
   }
 
   const handleContinue = () => {
+    onboarding?.setData(prev => ({ ...prev, interests: selectedIds }));
     navigation.navigate('StateSelection', {
       language: route.params?.language || 'Hindi',
       purpose: route.params?.purpose || 'For Myself',
@@ -73,7 +82,7 @@ export default function Interests({ route }: any) {
         <TouchableOpacity style={styles.backBtn} activeOpacity={0.7} onPress={handleBack}>
           <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Onboarding</Text>
+        <Text style={styles.headerTitle}>{t('interests.headerTitle')}</Text>
         <View style={styles.backBtnPlaceholder} />
       </View>
       <View style={styles.headerLine} />
@@ -92,13 +101,13 @@ export default function Interests({ route }: any) {
 
           {/* Almost There Badge */}
           <View style={styles.badgeBanner}>
-            <Text style={styles.badgeText}>✨ ALMOST THERE! JUST 2 MORE STEPS</Text>
+            <Text style={styles.badgeText}>✨ {t('interests.almostThere')}</Text>
           </View>
 
           {/* Headings */}
-          <Text style={styles.mainHeading}>What matters to{"\n"}you?</Text>
-          <Text style={styles.sectionLabel}>FESTIVALS & OCCASIONS</Text>
-          <Text style={styles.subHeading}>Choose the content you'd love to see daily</Text>
+          <Text style={styles.mainHeading}>{t('interests.heading')}</Text>
+          <Text style={styles.sectionLabel}>{t('interests.sectionLabel')}</Text>
+          <Text style={styles.subHeading}>{t('interests.subtitle')}</Text>
 
           {/* Grid of Interests */}
           <View style={styles.gridContainer}>
@@ -120,9 +129,9 @@ export default function Interests({ route }: any) {
                   </View>
 
                   {/* Texts */}
-                  <Text style={styles.cardTitle}>{cat.title}</Text>
+                  <Text style={styles.cardTitle}>{t(`interests.categories.${cat.id}.title`)}</Text>
                   <Text style={[styles.cardSubtitle, isSelected ? styles.selectedSubtitleColor : styles.unselectedSubtitleColor]}>
-                    {cat.subtitle}
+                    {t(`interests.categories.${cat.id}.subtitle`)}
                   </Text>
 
                   {/* Yellow Checkmark Badge */}
@@ -142,7 +151,7 @@ export default function Interests({ route }: any) {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+          <Text style={styles.btnText}>{t('interests.continue')}  →</Text>
         </TouchableOpacity>
       </View>
 

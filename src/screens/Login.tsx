@@ -1,21 +1,33 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { SafeAreaView, View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Animated, Dimensions, Alert } from 'react-native'
-import { useNavigation, CommonActions } from '@react-navigation/native'
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, Animated, Dimensions, Alert } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { CommonActions } from '@react-navigation/native'
+import { useAppNavigation } from '../navigation/types'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { SvgIcon } from '../components/SvgIcon'
+import { useUser } from '../context/UserContext'
+import { useTranslation } from 'react-i18next'
 
-let screenHeight = Dimensions.get('window').height
+// Height of screen — used to slide form in from below
+const screenHeight = Dimensions.get('window').height
 
 export default function LoginContainer() {
- 
-  let navigation = useNavigation<any>()
-  let slideAnim = useRef(new Animated.Value(screenHeight)).current
-  
-  const [ph, setPh] = useState('')
-  const [isOtp, setIsOtp] = useState(false)
-  const [err, setErr] = useState(false)
-  const [timer, setTimer] = useState(45)
-  const [otpErr, setOtpErr] = useState(false)
-  let shakeAnim = useRef(new Animated.Value(0)).current
+  const { t } = useTranslation()
 
+  const navigation = useAppNavigation()
+  const { setUser } = useUser()
+  // Starts at screenHeight (offscreen), animates to 0 (onscreen)
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current
+
+  // ── State variables ──
+  const [ph, setPh] = useState('')      // Phone number entered by user
+  const [isOtp, setIsOtp] = useState(false)  // false → phone screen, true → OTP screen
+  const [err, setErr] = useState(false)      // Phone number validation error
+  const [timer, setTimer] = useState(45)      // Countdown for OTP resend
+  const [otpErr, setOtpErr] = useState(false) // Wrong OTP error flag
+  const shakeAnim = useRef(new Animated.Value(0)).current  // Shake offset for wrong OTP
+
+  // Shakes the OTP input boxes horizontally when wrong OTP entered
   const triggerShake = () => {
     shakeAnim.setValue(0)
     Animated.sequence([
@@ -30,16 +42,19 @@ export default function LoginContainer() {
     setOtpErr(false)
   }
 
+  // 4 individual OTP digit values — one per input box
   const [otp1, setOtp1] = useState('')
   const [otp2, setOtp2] = useState('')
   const [otp3, setOtp3] = useState('')
   const [otp4, setOtp4] = useState('')
 
-  let ref1 = useRef<any>(null)
-  let ref2 = useRef<any>(null)
-  let ref3 = useRef<any>(null)
-  let ref4 = useRef<any>(null)
+  // Refs for auto-focusing between OTP input boxes
+  const ref1 = useRef<TextInput>(null)
+  const ref2 = useRef<TextInput>(null)
+  const ref3 = useRef<TextInput>(null)
+  const ref4 = useRef<TextInput>(null)
 
+  // Slide entire form content up from bottom on mount
   useEffect(() => {
     Animated.timing(slideAnim, {
       toValue: 0,
@@ -48,47 +63,70 @@ export default function LoginContainer() {
     }).start()
   }, [])
 
+  // Countdown timer for OTP resend
+  // Runs every 1 second, decrements timer. Stops at 0.
   useEffect(() => {
-    let interval: any = null
+    let interval: ReturnType<typeof setInterval> | null = null
     if (isOtp && timer > 0) {
       interval = setInterval(() => {
         setTimer((prev) => prev - 1)
       }, 1000)
     } else if (timer === 0) {
-      clearInterval(interval)
+      if (interval) clearInterval(interval)
     }
-    return () => clearInterval(interval)
+    return () => {
+      if (interval) clearInterval(interval)
+    }
   }, [isOtp, timer])
 
-  const handleSubmit = (e?: any) => {
-    if (isOtp == false) {
-      if (ph.length == 10) {
+  const handleSubmit = () => {
+    if (!isOtp) {
+      // ── STEP 1: Send OTP ──
+      // Validate phone number: must be exactly 10 digits
+      if (ph.length === 10) {
         setErr(false)
-        setTimer(45)
-        setIsOtp(true) 
+        setTimer(45)         // Reset resend countdown to 45s
+        setIsOtp(true)       // Switch to OTP screen
       } else {
-        setErr(true) 
+        setErr(true)         // Show validation error
       }
     } else {
+      // ── STEP 2: Verify OTP ──
       const enteredOtp = otp1 + otp2 + otp3 + otp4
-      if (enteredOtp === '1234') {
+      if (enteredOtp === '1234') {  // HARDCODED: any 1234 works (mock auth)
         setOtpErr(false)
-        Alert.alert("Success", "Logged In", [
+        Alert.alert(t('login.successTitle'), t('login.successMessage'), [
           {
             text: "OK",
-            onPress: () => {
-              navigation.navigate('Language')
+            onPress: async () => {
+              try {
+                // Save phone number to UserContext (persisted via AsyncStorage)
+                await setUser({ phone: ph })
+                // Check if onboarding is already done
+                const done = await AsyncStorage.getItem('onboardingDone')
+                if (done === 'true') {
+                  // Existing user → go directly to MainApp
+                  navigation.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{ name: 'MainApp' }],
+                    })
+                  )
+                } else {
+                  // New user → start onboarding flow
+                  navigation.navigate('Language')
+                }
+              } catch (_e) {
+                navigation.navigate('Language')
+              }
             }
           }
         ])
       } else {
+        // Wrong OTP → show error, shake boxes, clear for retry
         setOtpErr(true)
         triggerShake()
-        if (enteredOtp === '4321') {
-          Alert.alert("Error", "Incorrect OTP! You entered 4321, which is incorrect. Please enter 1234.")
-        } else {
-          Alert.alert("Error", "Wrong OTP! Please enter the correct OTP (1234).")
-        }
+        Alert.alert(t('login.errorTitle'), t('login.errorOtpMessage'))
         setOtp1('')
         setOtp2('')
         setOtp3('')
@@ -98,6 +136,7 @@ export default function LoginContainer() {
     }
   }
 
+  // Resend OTP: reset countdown, clear inputs, focus first box
   const handleResend = () => {
     setTimer(45)
     setOtp1('')
@@ -105,125 +144,146 @@ export default function LoginContainer() {
     setOtp3('')
     setOtp4('')
     if (ref1.current) ref1.current.focus()
-    Alert.alert("OTP Sent", "A new OTP has been sent to +91 " + ph)
+    Alert.alert(t('login.otpSentTitle'), t('login.otpSentMessage', { phone: ph }))
   }
 
   return (
-    <SafeAreaView style={[mystyles.mainWrapper, { display: 'flex', flexDirection: 'column' }]}>
+    <SafeAreaView style={[mystyles.mainWrapper]} edges={['top', 'bottom']}>
+      {/* Entire content slides up from bottom on mount */}
       <Animated.View style={[mystyles.contentDiv, { transform: [{ translateY: slideAnim }] }]}>
-        
-        <View style={{display: 'flex', alignItems: 'center', marginBottom: 50}}>
+
+        {/* ── Logo + Title ── */}
+        <View style={{ display: 'flex', alignItems: 'center', marginBottom: 50 }}>
           <View style={mystyles.logo_container}>
-            <Image 
-              source={require('../../assets/images/icon.png')} 
-              style={{width: '100%', height: '100%', borderRadius: 16}} 
+            <Image
+              source={require('../../assets/images/icon.png')}
+              style={{ width: '100%', height: '100%', borderRadius: 16 }}
             />
           </View>
-          <Text style={mystyles.purpleText}>WELCOME</Text>
+          <Text style={mystyles.purpleText}>{t('login.welcome')}</Text>
         </View>
 
-        <Text style={{color: 'white', fontSize: 32, fontWeight: 'bold', marginBottom: 12}}>Enter your phone{'\n'}number</Text>
-        <Text style={{color: '#94A3B8', fontSize: 15, marginBottom: 20}}>We'll send a quick OTP. No spam, ever.</Text>
-        
-        {isOtp == false ? (
+        <Text style={{ color: 'white', fontSize: 32, fontWeight: 'bold', marginBottom: 12 }}>{t('login.enterPhone')}</Text>
+        <Text style={{ color: '#94A3B8', fontSize: 15, marginBottom: 20 }}>{t('login.phoneSubtitle')}</Text>
+
+        {/* Secure badge shown only on phone step (not OTP step) */}
+        {!isOtp && (
           <View style={mystyles.badge}>
-            <Text style={{color: '#22C55E', fontSize: 10, fontWeight: 'bold'}}>🔒 YOUR NUMBER IS 100% SECURE</Text>
+            <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: 'bold' }}>
+              <SvgIcon name="lock" size={16} color="#22C55E" /> {t('login.secureBadge')}
+            </Text>
           </View>
-        ) : null}
+        )}
 
-        <View style={{flexDirection: 'row', marginBottom: 8}}>
+        {/* Error / Success messages */}
+        <View style={{ flexDirection: 'row', marginBottom: 8 }}>
           <View style={{ flex: 1 }} />
-          {err == true && isOtp == false ? <Text style={{color: 'red', fontWeight: 'bold'}}>Incorrect Number ✕</Text> : null}
-          {isOtp == true ? <Text style={{color: '#A855F7', fontWeight: 'bold'}}>OTP Sent ✓</Text> : null}
+          {err && !isOtp && <Text style={{ color: 'red', fontWeight: 'bold' }}>{t('login.incorrectNumber')}</Text>}
+          {isOtp && <Text style={{ color: '#A855F7', fontWeight: 'bold' }}><SvgIcon name="check" size={12} color="#A855F7" /> {t('login.otpSent')}</Text>}
         </View>
 
+        {/* ── Phone Input ── */}
         <View style={mystyles.formControl}>
-          {ph.length == 10 && err == false ? <Text style={{fontSize: 18, marginRight: 8}}>🇮🇳</Text> : null}
-          
-          <Text style={{fontSize: 16, fontWeight: 'bold', color: 'black', marginRight: 12}}>+91</Text>
-          <View style={{width: 1, height: 24, backgroundColor: 'gray', marginRight: 12}} />
-          
-          <TextInput 
-            style={[mystyles.textInp, err == true && isOtp == false ? { color: 'red' } : null]}
-            placeholder="Enter Number"
+          {ph.length === 10 && !err && <SvgIcon name="indiaFlag" size={16} color="#94A3B8" />}
+
+          <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'black', marginRight: 12 }}>{t('login.countryCode')}</Text>
+          <View style={{ width: 1, height: 24, backgroundColor: 'gray', marginRight: 12 }} />
+          <TextInput
+            style={[mystyles.textInp, err && !isOtp ? { color: 'red' } : undefined]}
+            placeholder={t('login.enterNumber')}
             placeholderTextColor="gray"
             keyboardType="numeric"
             value={ph}
-            editable={!isOtp}
+            editable={!isOtp}    // Lock phone input once OTP is sent
             maxLength={10}
-            onChangeText={(t) => {
-              setPh(t)
-              setErr(false)
+            onChangeText={(text) => {
+              setPh(text)
+              setErr(false)     // Clear error when user starts typing
             }}
           />
         </View>
 
-        {isOtp == true ? (
-          <View style={{alignItems: 'center', marginBottom: 24}}>
-            <Animated.View style={{flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 16, transform: [{ translateX: shakeAnim }] }}>
-              
-              <TextInput ref={ref1} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : null]} value={otp1} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
-                onChangeText={(t) => {
-                  setOtp1(t)
+        {/* ── OTP Input (shown after phone is submitted) ── */}
+        {isOtp && (
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            {/* shakeAnim causes boxes to shake left-right on wrong OTP */}
+            <Animated.View style={{
+              flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 16,
+              transform: [{ translateX: shakeAnim }]
+            }}>
+              {/* 4 individual digit boxes with auto-focus to next box on typing */}
+              <TextInput
+                ref={ref1} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : undefined]}
+                value={otp1} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
+                onChangeText={(text) => {
+                  setOtp1(text)
                   clearOtpErr()
-                  if(t != '') { ref2.current.focus() }
+                  if (text !== '' && ref2.current) ref2.current.focus()  // Auto-advance to next box
                 }}
               />
-              <TextInput ref={ref2} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : null]} value={otp2} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
-                onChangeText={(t) => {
-                  setOtp2(t)
+              <TextInput
+                ref={ref2} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : undefined]}
+                value={otp2} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
+                onChangeText={(text) => {
+                  setOtp2(text)
                   clearOtpErr()
-                  if(t != '') { ref3.current.focus() }
+                  if (text !== '' && ref3.current) ref3.current.focus()
                 }}
-                onKeyPress={({nativeEvent}) => { if(nativeEvent.key === 'Backspace' && otp2 == '') ref1.current.focus() }}
+                onKeyPress={({ nativeEvent }) => { if (nativeEvent.key === 'Backspace' && otp2 === '' && ref1.current) ref1.current.focus() }}
               />
-              <TextInput ref={ref3} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : null]} value={otp3} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
-                onChangeText={(t) => {
-                  setOtp3(t)
+              <TextInput
+                ref={ref3} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : undefined]}
+                value={otp3} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
+                onChangeText={(text) => {
+                  setOtp3(text)
                   clearOtpErr()
-                  if(t != '') { ref4.current.focus() }
+                  if (text !== '' && ref4.current) ref4.current.focus()
                 }}
-                onKeyPress={({nativeEvent}) => { if(nativeEvent.key === 'Backspace' && otp3 == '') ref2.current.focus() }}
+                onKeyPress={({ nativeEvent }) => { if (nativeEvent.key === 'Backspace' && otp3 === '' && ref2.current) ref2.current.focus() }}
               />
-              <TextInput ref={ref4} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : null]} value={otp4} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
-                onChangeText={(t) => {
-                  setOtp4(t)
+              <TextInput
+                ref={ref4} style={[mystyles.otpBox, otpErr ? { borderColor: '#EF4444', color: '#EF4444' } : undefined]}
+                value={otp4} maxLength={1} keyboardType="numeric" textAlign="center" placeholder="-" placeholderTextColor="gray"
+                onChangeText={(text) => {
+                  setOtp4(text)
                   clearOtpErr()
                 }}
-                onKeyPress={({nativeEvent}) => { if(nativeEvent.key === 'Backspace' && otp4 == '') ref3.current.focus() }}
+                onKeyPress={({ nativeEvent }) => { if (nativeEvent.key === 'Backspace' && otp4 === '' && ref3.current) ref3.current.focus() }}
               />
-
             </Animated.View>
-            <View style={{backgroundColor: 'rgba(34, 197, 94, 0.2)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20}}>
-              <Text style={{color: '#22C55E', fontWeight: 'bold'}}>✔ OTP auto-detected</Text>
+            {/* Placeholder badge — simulates auto-detecting OTP */}
+            <View style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 }}>
+              <Text style={{ color: '#22C55E', fontWeight: 'bold' }}>{t('login.otpAutoDetected')}</Text>
             </View>
           </View>
-        ) : null}
+        )}
 
+        {/* ── Submit Button ── */}
         <TouchableOpacity style={mystyles.submitBtn} onPress={handleSubmit}>
-          <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
-            {isOtp ? 'CONTINUE  →' : 'SEND OTP  →'}
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+            {isOtp ? t('login.continueBtn') : t('login.sendOtpBtn')}
           </Text>
         </TouchableOpacity>
 
+        {/* ── Footer: Resend OTP or Terms ── */}
         {isOtp ? (
           <View style={{ alignItems: 'center', marginTop: 10 }}>
             {timer > 0 ? (
               <Text style={{ color: 'gray', fontSize: 13, textAlign: 'center' }}>
-                Didn't receive code? <Text style={{ color: '#A855F7', fontWeight: 'bold' }}>Resend in 0:{timer < 10 ? `0${timer}` : timer}</Text>
+                {t('login.resendTimer', { timer: timer < 10 ? `0${timer}` : timer })}
               </Text>
             ) : (
               <TouchableOpacity onPress={handleResend} activeOpacity={0.7}>
                 <Text style={{ color: '#A855F7', fontSize: 14, fontWeight: 'bold', textDecorationLine: 'underline' }}>
-                  Resend OTP
+                  {t('login.resendOtp')}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
           <Text style={{ color: 'gray', fontSize: 10, textAlign: 'center' }}>
-            By continuing, you agree to{'\n'}our{'\n'}
-            <Text style={{ color: '#8B5CF6' }}>Terms of Service</Text> · <Text style={{ color: '#8B5CF6' }}>Privacy Policy</Text>
+            {t('login.termsPrefix')}
+            <Text style={{ color: '#8B5CF6' }}>{t('login.termsOfService')}</Text> · <Text style={{ color: '#8B5CF6' }}>{t('login.privacyPolicy')}</Text>
           </Text>
         )}
 

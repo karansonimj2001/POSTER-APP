@@ -1,13 +1,20 @@
+/**
+ * Onboarding step 2 — choose "For Myself" or "For My Business".
+ * Branches to Details (myself) or BusinessSetup (business).
+ */
 import React, { useState, useRef, useEffect } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, Image, StatusBar } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAppNavigation } from '../navigation/types'
+import { CheckIcon, BusinessIcon, FireIcon, ArrowRight, ArrowLeft } from '../components/Icons'
+import { useTranslation } from 'react-i18next'
+import { OnboardingContext } from '../onboarding/OnboardingContext'
 
 export default function Usage({ route }: any) {
-  const navigation = useNavigation<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
   const [selectedUse, setSelectedUse] = useState<'myself' | 'business'>('myself')
+  const onboarding = React.useContext(OnboardingContext)
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
@@ -29,6 +36,22 @@ export default function Usage({ route }: any) {
 
   const handleContinue = () => {
     const lang = route.params?.language || 'Hindi';
+    if (onboarding) {
+      if (selectedUse === 'myself') {
+        onboarding.setData(prev => ({
+          ...prev,
+          purpose: 'For Myself',
+          businessInfo: undefined // clear business flow data
+        }));
+      } else {
+        onboarding.setData(prev => ({
+          ...prev,
+          purpose: 'For Business',
+          profileInfo: undefined // clear myself flow data
+        }));
+      }
+    }
+
     if (selectedUse === 'myself') {
       navigation.navigate('Details', {
         language: lang,
@@ -47,15 +70,15 @@ export default function Usage({ route }: any) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0E1C" />
 
       {/* Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} activeOpacity={0.7} onPress={handleBack}>
-          <Text style={styles.backBtnText}>←</Text>
+          <ArrowLeft size={24} color="#8B5CF6" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Onboarding</Text>
+        <Text style={styles.headerTitle}>{t('usage.headerTitle')}</Text>
         <View style={styles.backBtnPlaceholder} />
       </View>
       <View style={styles.headerLine} />
@@ -72,8 +95,8 @@ export default function Usage({ route }: any) {
         </View>
 
         {/* Heading */}
-        <Text style={styles.mainHeading}>How will you use this?</Text>
-        <Text style={styles.subHeading}>We'll personalize your experience based on{"\n"}this</Text>
+        <Text style={styles.mainHeading}>{t('usage.heading')}</Text>
+        <Text style={styles.subHeading}>{t('usage.subtitle')}</Text>
 
         {/* Option Selection Block */}
         <View style={styles.optionsContainer}>
@@ -96,21 +119,21 @@ export default function Usage({ route }: any) {
               </View>
               {/* Profile Badge */}
               <View style={styles.profileBadge}>
-                <Text style={styles.profileBadgeText}>MY PROFILE</Text>
+                <Text style={styles.profileBadgeText}>{t('usage.myselfBadge')}</Text>
               </View>
             </View>
 
             <View style={styles.textContainer}>
-              <Text style={styles.optionTitle}>For Myself</Text>
+              <Text style={styles.optionTitle}>{t('usage.myselfTitle')}</Text>
               <Text style={styles.optionDescription}>
-                Wishes, quotes & status with{"\n"}my photo & name
+                {t('usage.myselfDesc')}
               </Text>
             </View>
 
             {/* Checkmark indicator */}
             {selectedUse === 'myself' && (
               <View style={styles.checkWrapper}>
-                <Text style={styles.checkText}>✓</Text>
+                <CheckIcon size={14} color="#000000" />
               </View>
             )}
           </TouchableOpacity>
@@ -127,31 +150,34 @@ export default function Usage({ route }: any) {
           >
             <View style={styles.leftIconContainer}>
               <View style={styles.storeIconWrapper}>
-                <Text style={styles.storeEmoji}>🏪</Text>
+                <BusinessIcon size={28} color="#FFFFFF" />
               </View>
               {/* Est Badge */}
               <View style={styles.estBadge}>
-                <Text style={styles.estBadgeText}>EST. 2024</Text>
+                <Text style={styles.estBadgeText}>{t('usage.businessBadge')}</Text>
               </View>
             </View>
 
             <View style={styles.textContainer}>
-              <Text style={styles.optionTitle}>For My Business</Text>
+              <Text style={styles.optionTitle}>{t('usage.businessTitle')}</Text>
               <Text style={styles.optionDescription}>
-                Posters & promotions with my{"\n"}brand logo & name
+                {t('usage.businessDesc')}
               </Text>
             </View>
 
             {/* Checkmark indicator */}
             {selectedUse === 'business' && (
               <View style={styles.checkWrapper}>
-                <Text style={styles.checkText}>✓</Text>
+                <CheckIcon size={14} color="#000000" />
               </View>
             )}
 
             {/* Hot selection recommendation label */}
             <View style={styles.businessRecommendLabel}>
-              <Text style={styles.recommendLabelText}>🔥 Most shops & businesses choose this</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <FireIcon size={12} color="#F59E0B" />
+                <Text style={[styles.recommendLabelText, {marginLeft: 4}]}>{t('usage.businessHint')}</Text>
+              </View>
             </View>
           </TouchableOpacity>
 
@@ -162,11 +188,12 @@ export default function Usage({ route }: any) {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+          <Text style={styles.btnText}>{t('usage.continue')}</Text>
+          <ArrowRight size={18} color="#FFFFFF" style={{marginLeft: 8}} />
         </TouchableOpacity>
       </View>
 
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -357,11 +384,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkText: {
-    color: '#000000',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
   businessRecommendLabel: {
     position: 'absolute',
     bottom: 12,
@@ -381,6 +403,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#7C3AED',
     borderRadius: 16,
     height: 56,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },

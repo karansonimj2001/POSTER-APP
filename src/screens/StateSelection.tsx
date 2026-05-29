@@ -1,9 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react'
+/**
+ * Onboarding step 5 — pick an Indian state from a searchable list.
+ * Saves location to OnboardingContext, then navigates to OnboardingComplete.
+ */
+import React, { useState, useRef, useEffect, useContext } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Dimensions, TextInput, StatusBar, Alert } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useAppNavigation } from '../navigation/types'
+import { useTranslation } from 'react-i18next'
+import { OnboardingContext } from '../onboarding/OnboardingContext'
 
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+const screenWidth = Dimensions.get('window').width
+const screenHeight = Dimensions.get('window').height
 
 interface StateItem {
   id: string;
@@ -51,7 +57,9 @@ const ChevronRight = () => (
 )
 
 export default function StateSelection({ route }: any) {
-  const navigation = useNavigation<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
+  const onboarding = useContext(OnboardingContext)
   const [selectedStateId, setSelectedStateId] = useState<string>('bihar') // Default Bihar like screenshot
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -75,7 +83,7 @@ export default function StateSelection({ route }: any) {
 
   const handleContinue = () => {
     if (!selectedStateId) {
-      Alert.alert("Required", "Please choose your state to continue.")
+      Alert.alert(t('stateSelection.requiredTitle'), t('stateSelection.requiredMessage'))
       return
     }
     const stateNameObj = STATES_LIST.find(s => s.id === selectedStateId);
@@ -88,6 +96,7 @@ export default function StateSelection({ route }: any) {
       state: stateLabel
     };
 
+    onboarding?.setData(prev => ({ ...prev, location: stateLabel }));
     navigation.navigate('OnboardingComplete', nextParams);
   }
 
@@ -96,7 +105,7 @@ export default function StateSelection({ route }: any) {
   }
 
   const handleGPSLocation = () => {
-    Alert.alert("GPS Location", "Successfully detected current location!")
+    Alert.alert(t('stateSelection.gpsTitle'), t('stateSelection.gpsMessage'))
     setSelectedStateId('delhi') // Simulate GPS change
   }
 
@@ -114,7 +123,7 @@ export default function StateSelection({ route }: any) {
         <TouchableOpacity style={styles.backBtn} activeOpacity={0.7} onPress={handleBack}>
           <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Onboarding</Text>
+        <Text style={styles.headerTitle}>{t('stateSelection.headerTitle')}</Text>
         <View style={styles.backBtnPlaceholder} />
       </View>
       <View style={styles.headerLine} />
@@ -137,20 +146,20 @@ export default function StateSelection({ route }: any) {
 
           {/* Last Step Badge */}
           <View style={styles.badgeBanner}>
-            <Text style={styles.badgeText}>Last step before your feed is ready! 🎯</Text>
+            <Text style={styles.badgeText}>{t('stateSelection.lastStep')}</Text>
           </View>
 
           {/* Headings */}
-          <Text style={styles.mainHeading}>Apna state choose{"\n"}karo</Text>
-          <Text style={styles.subHeading}>Pick your state</Text>
-          <Text style={styles.descText}>We'll show you posters relevant to your region</Text>
+          <Text style={styles.mainHeading}>{t('stateSelection.heading')}</Text>
+          <Text style={styles.subHeading}>{t('stateSelection.headingEn')}</Text>
+          <Text style={styles.descText}>{t('stateSelection.subtitle')}</Text>
 
           {/* Search Box */}
           <View style={styles.searchWrapper}>
             <SearchIcon />
             <TextInput 
               style={styles.searchInput}
-              placeholder="Search for your state..."
+              placeholder={t('stateSelection.searchPlaceholder')}
               placeholderTextColor="#484B68"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -168,15 +177,15 @@ export default function StateSelection({ route }: any) {
                 <PinIcon />
               </View>
               <View style={styles.gpsTextWrapper}>
-                <Text style={styles.gpsTitle}>Use my current location</Text>
-                <Text style={styles.gpsSubtitle}>based on GPS</Text>
+                <Text style={styles.gpsTitle}>{t('stateSelection.useLocation')}</Text>
+                <Text style={styles.gpsSubtitle}>{t('stateSelection.gpsLabel')}</Text>
               </View>
             </View>
             <ChevronRight />
           </TouchableOpacity>
 
           {/* Section Title */}
-          <Text style={styles.sectionTitle}>ALL STATES</Text>
+          <Text style={styles.sectionTitle}>{t('stateSelection.allStates')}</Text>
 
           {/* States List */}
           <View style={styles.statesListContainer}>
@@ -193,8 +202,8 @@ export default function StateSelection({ route }: any) {
                   ]}
                 >
                   <View style={styles.stateTextWrapper}>
-                    <Text style={styles.stateName}>{state.name}</Text>
-                    <Text style={styles.stateHindi}>{state.nameHindi}</Text>
+                    <Text style={styles.stateName}>{t(`stateSelection.states.${state.id}.name`)}</Text>
+                    <Text style={styles.stateHindi}>{t(`stateSelection.states.${state.id}.nameHindi`)}</Text>
                   </View>
 
                   {/* Yellow Checkmark Badge */}
@@ -208,7 +217,7 @@ export default function StateSelection({ route }: any) {
             })}
             
             {filteredStates.length === 0 && (
-              <Text style={styles.noResultsText}>No states found matching "{searchQuery}"</Text>
+              <Text style={styles.noResultsText}>{t('stateSelection.noResults', { query: searchQuery })}</Text>
             )}
           </View>
 
@@ -218,7 +227,7 @@ export default function StateSelection({ route }: any) {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+          <Text style={styles.btnText}>{t('stateSelection.continue')}  →</Text>
         </TouchableOpacity>
       </View>
 

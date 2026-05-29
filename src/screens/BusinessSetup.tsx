@@ -1,9 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react'
+/**
+ * Onboarding step 3b (business flow) — enter business name + logo.
+ * Saves to OnboardingContext, then navigates to Interests.
+ */
+import React, { useState, useRef, useEffect, useContext } from 'react'
 import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TextInput, Image, StatusBar, Alert } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
+import { useAppNavigation } from '../navigation/types'
+import { useTranslation } from 'react-i18next'
+import { OnboardingContext } from '../onboarding/OnboardingContext'
 
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+const screenWidth = Dimensions.get('window').width
+const screenHeight = Dimensions.get('window').height
 
 // Custom Aperture (Camera Lens) Shutter Icon using pure CSS Shapes
 const ApertureIcon = () => {
@@ -39,7 +45,9 @@ const GalleryIcon = () => {
 }
 
 export default function BusinessSetup({ route }: any) {
-  const navigation = useNavigation<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
+  const onboarding = useContext(OnboardingContext)
   const [businessName, setBusinessName] = useState('')
   const [logoSelected, setLogoSelected] = useState(false)
 
@@ -63,9 +71,10 @@ export default function BusinessSetup({ route }: any) {
 
   const handleContinue = () => {
     if (businessName.trim() === '') {
-      Alert.alert("Required", "Please enter your business name to continue.")
+      Alert.alert(t('businessSetup.requiredTitle'), t('businessSetup.requiredMessage'))
       return
     }
+    onboarding?.setData(prev => ({ ...prev, businessInfo: { name: businessName, logoSelected } }));
     navigation.navigate('Interests', {
       language: route.params?.language || 'Hindi',
       purpose: route.params?.purpose || 'For Business',
@@ -79,7 +88,7 @@ export default function BusinessSetup({ route }: any) {
 
   const handleAddLogo = () => {
     setLogoSelected(!logoSelected)
-    Alert.alert("Logo Selected", "Brand logo has been linked successfully!")
+    Alert.alert(t('businessSetup.logoSelTitle'), t('businessSetup.logoSelMessage'))
   }
 
   return (
@@ -91,15 +100,15 @@ export default function BusinessSetup({ route }: any) {
         <TouchableOpacity style={styles.backBtn} activeOpacity={0.7} onPress={handleBack}>
           <Text style={styles.backBtnText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Business Setup</Text>
+        <Text style={styles.headerTitle}>{t('businessSetup.headerTitle')}</Text>
       </View>
       <View style={styles.headerLine} />
 
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         
         {/* Title & Subtitle */}
-        <Text style={styles.mainHeading}>Set Up Your Business</Text>
-        <Text style={styles.subHeading}>Your brand logo and name will be added to your{"\n"}business posters</Text>
+        <Text style={styles.mainHeading}>{t('businessSetup.heading')}</Text>
+        <Text style={styles.subHeading}>{t('businessSetup.subtitle')}</Text>
 
         {/* Logo Upload Circle */}
         <View style={styles.logoWrapper}>
@@ -110,7 +119,7 @@ export default function BusinessSetup({ route }: any) {
               ) : (
                 <View style={styles.addLogoInner}>
                   <ApertureIcon />
-                  <Text style={styles.addLogoText}>ADD LOGO</Text>
+                  <Text style={styles.addLogoText}>{t('businessSetup.addLogo')}</Text>
                 </View>
               )}
               
@@ -124,10 +133,10 @@ export default function BusinessSetup({ route }: any) {
 
         {/* Business Name Input Block */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Business Name</Text>
+          <Text style={styles.inputLabel}>{t('businessSetup.nameLabel')}</Text>
           <TextInput 
             style={styles.textInput} 
-            placeholder="Enter business name" 
+            placeholder={t('businessSetup.namePlaceholder')} 
             placeholderTextColor="#484B68"
             value={businessName}
             onChangeText={setBusinessName}
@@ -139,12 +148,12 @@ export default function BusinessSetup({ route }: any) {
         <View style={styles.trustBadge}>
           <View style={styles.orangeVerticalStrip} />
           <Text style={styles.fireIcon}>🔥</Text>
-          <Text style={styles.trustText}>Business posts with logo get 4x more{"\n"}customer trust</Text>
+          <Text style={styles.trustText}>{t('businessSetup.trustTip')}</Text>
         </View>
 
         {/* Real-time Business Card Preview Block */}
         <View style={styles.previewContainer}>
-          <Text style={styles.previewLabel}>BUSINESS PREVIEW</Text>
+          <Text style={styles.previewLabel}>{t('businessSetup.preview')}</Text>
           
           <View style={styles.previewCard}>
             <View style={styles.cardImageWrapper}>
@@ -183,7 +192,7 @@ export default function BusinessSetup({ route }: any) {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+          <Text style={styles.btnText}>{t('businessSetup.continue')}  →</Text>
         </TouchableOpacity>
       </View>
 

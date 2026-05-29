@@ -1,14 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TextInput, Image, StatusBar, Alert } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-
-let screenWidth = Dimensions.get('window').width
-let screenHeight = Dimensions.get('window').height
+/**
+ * Onboarding step 3a (myself flow) — enter name + optional photo.
+ * Saves to OnboardingContext, then navigates to Interests.
+ */
+import React, { useState, useRef, useEffect, useContext } from 'react'
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TextInput, Image, StatusBar, Alert } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useAppNavigation } from '../navigation/types'
+import { ArrowLeft, CameraIcon, StarIcon, UserIcon, SparklesIcon, ArrowRight } from '../components/Icons'
+import { OnboardingContext } from '../onboarding/OnboardingContext'
+import { useTranslation } from 'react-i18next'
 
 export default function Details({ route }: any) {
-  const navigation = useNavigation<any>()
+  const { t } = useTranslation()
+  const navigation = useAppNavigation()
   const [name, setName] = useState('')
   const [photoSelected, setPhotoSelected] = useState(false)
+  const onboarding = useContext(OnboardingContext)
 
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(30)).current
@@ -30,8 +37,14 @@ export default function Details({ route }: any) {
 
   const handleContinue = () => {
     if (name.trim() === '') {
-      Alert.alert("Required", "Please enter your name to continue.")
+      Alert.alert(t('details.requiredTitle'), t('details.requiredMessage'))
       return
+    }
+    if (onboarding) {
+      onboarding.setData(prev => ({
+        ...prev,
+        profileInfo: { name, photo: photoSelected ? 'selected' : undefined }
+      }));
     }
     navigation.navigate('Interests', {
       language: route.params?.language || 'Hindi',
@@ -45,21 +58,23 @@ export default function Details({ route }: any) {
   }
 
   const handleAddPhoto = () => {
-    // Mock photo upload
-    setPhotoSelected(!photoSelected)
-    Alert.alert("Photo Selected", "Profile photo has been linked to your identity card!")
+    const newVal = !photoSelected
+    setPhotoSelected(newVal)
+    if (newVal) {
+      Alert.alert(t('details.photoSelectedTitle'), t('details.photoSelectedMessage'))
+    }
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0E1C" />
 
       {/* Header Bar */}
       <View style={styles.headerBar}>
         <TouchableOpacity style={styles.backBtn} activeOpacity={0.7} onPress={handleBack}>
-          <Text style={styles.backBtnText}>←</Text>
+          <ArrowLeft size={24} color="#8B5CF6" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Details</Text>
+        <Text style={styles.headerTitle}>{t('details.headerTitle')}</Text>
         <View style={styles.backBtnPlaceholder} />
       </View>
       <View style={styles.headerLine} />
@@ -67,8 +82,8 @@ export default function Details({ route }: any) {
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         
         {/* Title & Subtitle */}
-        <Text style={styles.mainHeading}>Design Your Identity</Text>
-        <Text style={styles.subHeading}>Your photo and name appear on every post{"\n"}you share</Text>
+        <Text style={styles.mainHeading}>{t('details.heading')}</Text>
+        <Text style={styles.subHeading}>{t('details.subtitle')}</Text>
 
         {/* Photo Upload Circle */}
         <TouchableOpacity style={styles.photoContainer} activeOpacity={0.8} onPress={handleAddPhoto}>
@@ -77,24 +92,24 @@ export default function Details({ route }: any) {
               <Image source={require('../../assets/images/user_avatar.png')} style={styles.selectedUserImage} />
             ) : (
               <View style={styles.addPhotoInner}>
-                <Text style={styles.cameraIcon}>📷</Text>
-                <Text style={styles.addPhotoText}>ADD PHOTO</Text>
+                <CameraIcon size={26} color="#A78BFA" style={{marginBottom: 6}} />
+                <Text style={styles.addPhotoText}>{t('details.addPhoto')}</Text>
               </View>
             )}
             
             {/* Orange Plus Badge */}
             <View style={styles.orangePlusBadge}>
-              <Text style={styles.orangePlusText}>+</Text>
+              <Text style={styles.orangePlusText}>{t('details.addPhotoPlus')}</Text>
             </View>
           </View>
         </TouchableOpacity>
 
         {/* Name Input Block */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>YOUR NAME</Text>
+          <Text style={styles.inputLabel}>{t('details.nameLabel')}</Text>
           <TextInput 
             style={styles.textInput} 
-            placeholder="Enter your name" 
+            placeholder={t('details.namePlaceholder')} 
             placeholderTextColor="#64748B"
             value={name}
             onChangeText={setName}
@@ -105,7 +120,7 @@ export default function Details({ route }: any) {
         {/* Real-time Card Preview Block */}
         <View style={styles.previewContainer}>
           <View style={styles.previewHeader}>
-            <Text style={styles.previewLabel}>PREVIEW</Text>
+            <Text style={styles.previewLabel}>{t('details.preview')}</Text>
             <View style={styles.previewUnderline} />
           </View>
 
@@ -118,7 +133,9 @@ export default function Details({ route }: any) {
             <View style={styles.cardOverlay} />
 
             {/* Star Icon in top-right */}
-            <Text style={styles.starIcon}>★</Text>
+            <View style={styles.starIconContainer}>
+              <StarIcon size={16} color="#F59E0B" />
+            </View>
 
             {/* User Info inside card (Bottom Left) */}
             <View style={styles.userInfoRow}>
@@ -126,7 +143,7 @@ export default function Details({ route }: any) {
                 {photoSelected ? (
                   <Image source={require('../../assets/images/user_avatar.png')} style={styles.previewAvatar} />
                 ) : (
-                  <Text style={styles.userIconChar}>👤</Text>
+                  <UserIcon size={20} color="#FFFFFF" />
                 )}
               </View>
               <View style={styles.userTextLines}>
@@ -145,8 +162,8 @@ export default function Details({ route }: any) {
 
         {/* Engagement Booster Recommendation Badge */}
         <View style={styles.engagementBadge}>
-          <Text style={styles.sparkleIcon}>✨</Text>
-          <Text style={styles.engagementText}>Posts with your photo get 3x more engagement</Text>
+          <SparklesIcon size={14} color="#F59E0B" style={{marginRight: 8}} />
+          <Text style={styles.engagementText}>{t('details.engagementTip')}</Text>
         </View>
 
       </Animated.View>
@@ -154,11 +171,12 @@ export default function Details({ route }: any) {
       {/* Bottom Button Panel */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.continueBtn} activeOpacity={0.8} onPress={handleContinue}>
-          <Text style={styles.btnText}>CONTINUE  →</Text>
+          <Text style={styles.btnText}>{t('details.continue')}</Text>
+          <ArrowRight size={18} color="#FFFFFF" style={{marginLeft: 8}} />
         </TouchableOpacity>
       </View>
 
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -181,11 +199,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backBtnText: {
-    color: '#8B5CF6',
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   backBtnPlaceholder: {
     width: 40,
@@ -241,11 +254,6 @@ const styles = StyleSheet.create({
   addPhotoInner: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cameraIcon: {
-    fontSize: 26,
-    color: '#A78BFA',
-    marginBottom: 6,
   },
   addPhotoText: {
     color: '#A78BFA',
@@ -337,12 +345,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  starIcon: {
+  starIconContainer: {
     position: 'absolute',
     top: 16,
     right: 16,
-    fontSize: 20,
-    color: '#F59E0B',
   },
   userInfoRow: {
     flexDirection: 'row',
@@ -359,9 +365,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#7C3AED',
     overflow: 'hidden',
-  },
-  userIconChar: {
-    fontSize: 20,
   },
   previewAvatar: {
     width: '100%',
@@ -401,11 +404,6 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
   },
-  sparkleIcon: {
-    marginRight: 8,
-    fontSize: 14,
-    color: '#F59E0B',
-  },
   engagementText: {
     color: '#F59E0B',
     fontSize: 12,
@@ -420,6 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#7C3AED',
     borderRadius: 16,
     height: 56,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },

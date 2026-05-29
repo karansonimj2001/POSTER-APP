@@ -1,4 +1,7 @@
-// src/components/InputField.tsx
+/**
+ * Reusable text input with dark theme styling and error state.
+ * Not currently used by any screen; all screens have inline TextInputs.
+ */
 import React from 'react';
 import { TextInput, StyleSheet, View, Text } from 'react-native';
 
